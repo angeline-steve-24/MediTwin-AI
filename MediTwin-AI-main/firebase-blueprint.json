@@ -1,0 +1,498 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user base record with assigned role",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User identifier matching auth.uid",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Full display name of user",
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user in MEDiTWIN",
+          "enum": ["PATIENT", "DOCTOR"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when the user registered",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "name", "email", "role", "createdAt"]
+    },
+    "PatientProfile": {
+      "title": "PatientProfile",
+      "description": "Clinical health background and medical twin baseline",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User ID matching auth.uid",
+          "maxLength": 128
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Patient full legal or clinical name",
+          "maxLength": 120
+        },
+        "age": {
+          "type": "number",
+          "description": "Patient age in years"
+        },
+        "gender": {
+          "type": "string",
+          "description": "Gender identity",
+          "enum": ["female", "male", "other", "prefer-not-to-say"]
+        },
+        "weight": {
+          "type": "string",
+          "description": "Patient body weight with units",
+          "maxLength": 30
+        },
+        "allergies": {
+          "type": "array",
+          "description": "Known allergies"
+        },
+        "chronicConditions": {
+          "type": "array",
+          "description": "Diagnosed chronic conditions"
+        },
+        "pregnancyStatus": {
+          "type": "string",
+          "description": "Pregnancy or lactation status",
+          "enum": [
+            "not-applicable",
+            "not-pregnant",
+            "pregnant-first-trimester",
+            "pregnant-second-trimester",
+            "pregnant-third-trimester",
+            "breastfeeding"
+          ]
+        },
+        "emergencyContact": {
+          "type": "object",
+          "description": "Designated emergency contact"
+        },
+        "connectionCode": {
+          "type": "string",
+          "description": "Patient sharing code for doctor connection",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "fullName", "age", "gender", "connectionCode", "createdAt", "updatedAt"]
+    },
+    "DoctorProfile": {
+      "title": "DoctorProfile",
+      "description": "Healthcare provider profile and clinical practice details",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Doctor user ID matching auth.uid",
+          "maxLength": 128
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Clinician name including professional title",
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified clinical contact email",
+          "maxLength": 160
+        },
+        "professionalRole": {
+          "type": "string",
+          "description": "Professional practice title",
+          "maxLength": 100
+        },
+        "specialization": {
+          "type": "string",
+          "description": "Clinical sub-specialty or focus",
+          "maxLength": 100
+        },
+        "organization": {
+          "type": "string",
+          "description": "Hospital, clinic, or practice network",
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Profile update timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "fullName", "email", "professionalRole", "organization", "createdAt", "updatedAt"]
+    },
+    "DoctorPatientRelationship": {
+      "title": "DoctorPatientRelationship",
+      "description": "Consent and access link between a doctor and patient",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Relationship document ID",
+          "maxLength": 128
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Doctor user ID",
+          "maxLength": 128
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Patient user ID",
+          "maxLength": 128
+        },
+        "patientConnectionCode": {
+          "type": "string",
+          "description": "Patient connection code used for request",
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "description": "Connection authorization status",
+          "enum": ["PENDING", "ACTIVE", "DECLINED", "REVOKED"]
+        },
+        "requestedBy": {
+          "type": "string",
+          "description": "Initiator of the connection",
+          "enum": ["DOCTOR"]
+        },
+        "doctorName": {
+          "type": "string",
+          "description": "Doctor full name snapshot",
+          "maxLength": 120
+        },
+        "doctorRole": {
+          "type": "string",
+          "description": "Doctor role snapshot",
+          "maxLength": 100
+        },
+        "doctorSpecialization": {
+          "type": "string",
+          "description": "Doctor specialization snapshot",
+          "maxLength": 100
+        },
+        "doctorOrganization": {
+          "type": "string",
+          "description": "Doctor healthcare organization snapshot",
+          "maxLength": 150
+        },
+        "doctorEmail": {
+          "type": "string",
+          "description": "Doctor email snapshot",
+          "maxLength": 160
+        },
+        "patientName": {
+          "type": "string",
+          "description": "Patient display name snapshot",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Request creation timestamp",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Status change timestamp",
+          "maxLength": 64
+        },
+        "authorizedAt": {
+          "type": "string",
+          "description": "Patient authorization timestamp",
+          "maxLength": 64
+        },
+        "revokedAt": {
+          "type": "string",
+          "description": "Access revocation timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "doctorId", "patientId", "status", "requestedBy", "doctorName", "patientName", "createdAt", "updatedAt"]
+    },
+    "Medication": {
+      "title": "Medication",
+      "description": "Medication regimen entry for a patient digital twin",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Medication ID",
+          "maxLength": 128
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Owner patient user ID",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Commercial or clinical name of the drug",
+          "maxLength": 150
+        },
+        "genericName": {
+          "type": "string",
+          "description": "Active scientific pharmaceutical ingredient",
+          "maxLength": 150
+        },
+        "brandName": {
+          "type": "string",
+          "description": "Brand or trade name",
+          "maxLength": 150
+        },
+        "strength": {
+          "type": "string",
+          "description": "Dosage strength e.g. 10mg",
+          "maxLength": 80
+        },
+        "dosage": {
+          "type": "string",
+          "description": "Prescribed dose amount",
+          "maxLength": 80
+        },
+        "dosageUnit": {
+          "type": "string",
+          "description": "Measurement unit",
+          "maxLength": 40
+        },
+        "frequency": {
+          "type": "string",
+          "description": "Dosing frequency e.g. Twice daily with meals",
+          "maxLength": 120
+        },
+        "route": {
+          "type": "string",
+          "description": "Administration route e.g. Oral, Inhalation",
+          "maxLength": 60
+        },
+        "duration": {
+          "type": "string",
+          "description": "Treatment duration",
+          "maxLength": 60
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date",
+          "maxLength": 40
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date if discontinued or course completed",
+          "maxLength": 40
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Medical indication or condition treated",
+          "maxLength": 150
+        },
+        "prescribedBy": {
+          "type": "string",
+          "description": "Physician name or clinical provider",
+          "maxLength": 120
+        },
+        "prescriptionId": {
+          "type": "string",
+          "description": "Originating prescription document reference",
+          "maxLength": 128
+        },
+        "source": {
+          "type": "string",
+          "description": "Source of record entry",
+          "enum": ["MANUAL", "PRESCRIPTION_OCR"]
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Active status in patient medication regimen"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Record creation timestamp",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Record update timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "patientId", "name", "strength", "dosage", "frequency", "route", "source", "active", "createdAt", "updatedAt"]
+    },
+    "Prescription": {
+      "title": "Prescription",
+      "description": "Uploaded prescription document and extracted OCR medications",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Prescription document ID",
+          "maxLength": 128
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Patient user ID",
+          "maxLength": 128
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Prescription image or document file name",
+          "maxLength": 200
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Base64 or storage URL",
+          "maxLength": 500000
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "Upload timestamp",
+          "maxLength": 64
+        },
+        "prescriptionDate": {
+          "type": "string",
+          "description": "Date stated on prescription",
+          "maxLength": 40
+        },
+        "doctorName": {
+          "type": "string",
+          "description": "Prescribing clinician name",
+          "maxLength": 120
+        },
+        "clinicName": {
+          "type": "string",
+          "description": "Clinic or hospital",
+          "maxLength": 150
+        },
+        "patientName": {
+          "type": "string",
+          "description": "Patient name on prescription",
+          "maxLength": 120
+        },
+        "extractedMedications": {
+          "type": "array",
+          "description": "Medications extracted via Gemini OCR"
+        },
+        "extractionStatus": {
+          "type": "string",
+          "description": "OCR extraction process state",
+          "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
+        },
+        "verificationStatus": {
+          "type": "string",
+          "description": "Patient clinical review status",
+          "enum": ["NOT_REVIEWED", "VERIFIED"]
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Error message if extraction failed",
+          "maxLength": 300
+        },
+        "notes": {
+          "type": "string",
+          "description": "Clinical or patient notes",
+          "maxLength": 500
+        }
+      },
+      "required": ["id", "patientId", "fileName", "uploadedAt", "extractionStatus", "verificationStatus"]
+    },
+    "EmergencyPassport": {
+      "title": "EmergencyPassport",
+      "description": "Emergency health passport with active medications and QR code access",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Patient user ID",
+          "maxLength": 128
+        },
+        "qrCodeIdentifier": {
+          "type": "string",
+          "description": "Cryptographic emergency passport token",
+          "maxLength": 128
+        },
+        "bloodType": {
+          "type": "string",
+          "description": "ABO and Rh blood group",
+          "maxLength": 10
+        },
+        "criticalAllergies": {
+          "type": "array",
+          "description": "High-risk allergic reactions"
+        },
+        "emergencyContacts": {
+          "type": "array",
+          "description": "Primary and secondary emergency contacts"
+        },
+        "currentActiveMedications": {
+          "type": "array",
+          "description": "Active medications summary list"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Timestamp of last emergency data sync",
+          "maxLength": 64
+        }
+      },
+      "required": ["userId", "qrCodeIdentifier", "lastUpdated"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Authenticated user base record with assigned role"
+    },
+    "/patientProfiles/{userId}": {
+      "schema": "PatientProfile",
+      "description": "Patient clinical health background and connection code"
+    },
+    "/doctorProfiles/{userId}": {
+      "schema": "DoctorProfile",
+      "description": "Doctor healthcare provider profile and practice details"
+    },
+    "/doctorPatientRelationships/{relationshipId}": {
+      "schema": "DoctorPatientRelationship",
+      "description": "Consent and access link between a doctor and patient"
+    },
+    "/medications/{medicationId}": {
+      "schema": "Medication",
+      "description": "Medication regimen entry for a patient digital twin"
+    },
+    "/prescriptions/{prescriptionId}": {
+      "schema": "Prescription",
+      "description": "Uploaded prescription document and extracted OCR medications"
+    },
+    "/emergencyPassports/{userId}": {
+      "schema": "EmergencyPassport",
+      "description": "Emergency health passport and critical health data"
+    }
+  }
+}

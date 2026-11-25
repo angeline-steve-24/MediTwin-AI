@@ -1,0 +1,256 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health / connection test doc
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // ==========================================
+    // PRIMITIVE HELPERS
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Relational Access Gate: Verify clinician profile exists
+    function isAuthorizedDoctorForPatient(patientId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/doctorProfiles/$(request.auth.uid));
+    }
+
+    // ==========================================
+    // VALIDATION BLUEPRINTS
+    // ==========================================
+
+    // 1. User Validation Blueprint
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'name', 'email', 'role', 'createdAt']) &&
+             data.id == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 160 &&
+             (data.role == 'PATIENT' || data.role == 'DOCTOR') &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // 2. Patient Profile Validation Blueprint
+    function isValidPatientProfile(data) {
+      return data.keys().hasAll(['userId', 'fullName', 'age', 'gender', 'connectionCode', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly([
+               'userId', 'fullName', 'age', 'gender', 'weight',
+               'allergies', 'chronicConditions', 'pregnancyStatus',
+               'emergencyContact', 'connectionCode', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId == request.auth.uid &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 120 &&
+             data.age is number && data.age >= 0 && data.age <= 130 &&
+             data.gender is string && (data.gender in ['female', 'male', 'other', 'prefer-not-to-say']) &&
+             (!('weight' in data) || (data.weight is string && data.weight.size() <= 30)) &&
+             (!('pregnancyStatus' in data) || (data.pregnancyStatus is string && (data.pregnancyStatus in [
+               'not-applicable', 'not-pregnant', 'pregnant-first-trimester',
+               'pregnant-second-trimester', 'pregnant-third-trimester', 'breastfeeding'
+             ]))) &&
+             (!('allergies' in data) || (data.allergies is list && data.allergies.size() <= 50 && (data.allergies.size() == 0 || data.allergies[0] is string))) &&
+             (!('chronicConditions' in data) || (data.chronicConditions is list && data.chronicConditions.size() <= 50 && (data.chronicConditions.size() == 0 || data.chronicConditions[0] is string))) &&
+             (!('emergencyContact' in data) || data.emergencyContact is map) &&
+             data.connectionCode is string && data.connectionCode.size() > 0 && data.connectionCode.size() <= 40 &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    // 3. Doctor Profile Validation Blueprint
+    function isValidDoctorProfile(data) {
+      return data.keys().hasAll(['userId', 'fullName', 'email', 'professionalRole', 'organization', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'fullName', 'email', 'professionalRole', 'specialization', 'organization', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 120 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 160 &&
+             data.professionalRole is string && data.professionalRole.size() > 0 && data.professionalRole.size() <= 100 &&
+             (!('specialization' in data) || (data.specialization is string && data.specialization.size() <= 100)) &&
+             data.organization is string && data.organization.size() > 0 && data.organization.size() <= 150 &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    // 4. Doctor Patient Relationship Validation Blueprint
+    function isValidRelationship(data) {
+      return data.keys().hasAll(['id', 'doctorId', 'patientId', 'status', 'requestedBy', 'doctorName', 'patientName', 'createdAt', 'updatedAt']) &&
+             isValidId(data.id) &&
+             data.doctorId is string && data.doctorId.size() <= 128 &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             (data.status in ['PENDING', 'ACTIVE', 'DECLINED', 'REVOKED']) &&
+             data.requestedBy == 'DOCTOR' &&
+             data.doctorName is string && data.doctorName.size() <= 120 &&
+             data.patientName is string && data.patientName.size() <= 120 &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    // 5. Medication Validation Blueprint
+    function isValidMedication(data) {
+      return data.keys().hasAll(['id', 'patientId', 'name', 'strength', 'dosage', 'frequency', 'route', 'source', 'active', 'createdAt', 'updatedAt']) &&
+             isValidId(data.id) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             data.strength is string && data.strength.size() <= 80 &&
+             data.dosage is string && data.dosage.size() <= 80 &&
+             data.frequency is string && data.frequency.size() <= 120 &&
+             data.route is string && data.route.size() <= 60 &&
+             (data.source in ['MANUAL', 'PRESCRIPTION_OCR']) &&
+             data.active is bool &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    // 6. Prescription Validation Blueprint
+    function isValidPrescription(data) {
+      return data.keys().hasAll(['id', 'patientId', 'fileName', 'uploadedAt', 'extractionStatus', 'verificationStatus']) &&
+             isValidId(data.id) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.fileName is string && data.fileName.size() <= 200 &&
+             data.uploadedAt is string && data.uploadedAt.size() <= 64 &&
+             (data.extractionStatus in ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']) &&
+             (data.verificationStatus in ['NOT_REVIEWED', 'VERIFIED']) &&
+             (!('extractedMedications' in data) || (data.extractedMedications is list && data.extractedMedications.size() <= 50));
+    }
+
+    // 7. Emergency Passport Validation Blueprint
+    function isValidEmergencyPassport(data) {
+      return data.keys().hasAll(['userId', 'qrCodeIdentifier', 'lastUpdated']) &&
+             data.userId == request.auth.uid &&
+             data.qrCodeIdentifier is string && data.qrCodeIdentifier.size() <= 128 &&
+             data.lastUpdated is string && data.lastUpdated.size() <= 64 &&
+             (!('criticalAllergies' in data) || (data.criticalAllergies is list && data.criticalAllergies.size() <= 50)) &&
+             (!('emergencyContacts' in data) || (data.emergencyContacts is list && data.emergencyContacts.size() <= 10)) &&
+             (!('currentActiveMedications' in data) || (data.currentActiveMedications is list && data.currentActiveMedications.size() <= 50));
+    }
+
+    // ==========================================
+    // COLLECTION ACCESS RULES
+    // ==========================================
+
+    // 1. Users Collection: Strict PII Isolation
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && resource.data.id == request.auth.uid;
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email']);
+      allow delete: if isOwner(userId);
+    }
+
+    // 2. Patient Profiles Collection
+    match /patientProfiles/{userId} {
+      allow get: if isOwner(userId) || isAuthorizedDoctorForPatient(userId);
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAuthorizedDoctorForPatient(resource.data.userId));
+      allow create: if isOwner(userId) && isValidPatientProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidPatientProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    // 3. Doctor Profiles Collection
+    match /doctorProfiles/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidDoctorProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidDoctorProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    // 4. Doctor Patient Relationships Collection
+    match /doctorPatientRelationships/{relId} {
+      allow get: if isSignedIn() && (resource.data.doctorId == request.auth.uid || resource.data.patientId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.doctorId == request.auth.uid || resource.data.patientId == request.auth.uid);
+      allow create: if isSignedIn() &&
+                       isValidId(relId) &&
+                       incoming().doctorId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       isValidRelationship(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(relId) &&
+                       (existing().doctorId == request.auth.uid || existing().patientId == request.auth.uid) &&
+                       isValidRelationship(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().doctorId == existing().doctorId &&
+                       incoming().patientId == existing().patientId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && (existing().doctorId == request.auth.uid || existing().patientId == request.auth.uid);
+    }
+
+    // 5. Medications Collection
+    match /medications/{medId} {
+      allow get: if isSignedIn() && (resource.data.patientId == request.auth.uid || isAuthorizedDoctorForPatient(resource.data.patientId));
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isAuthorizedDoctorForPatient(resource.data.patientId));
+      allow create: if isSignedIn() &&
+                       isValidId(medId) &&
+                       (incoming().patientId == request.auth.uid || isAuthorizedDoctorForPatient(incoming().patientId)) &&
+                       isValidMedication(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(medId) &&
+                       (existing().patientId == request.auth.uid || isAuthorizedDoctorForPatient(existing().patientId)) &&
+                       isValidMedication(incoming()) &&
+                       incoming().patientId == existing().patientId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() &&
+                       (existing().patientId == request.auth.uid || isAuthorizedDoctorForPatient(existing().patientId));
+    }
+
+    // 6. Prescriptions Collection
+    match /prescriptions/{prescriptionId} {
+      allow get: if isSignedIn() && (resource.data.patientId == request.auth.uid || isAuthorizedDoctorForPatient(resource.data.patientId));
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isAuthorizedDoctorForPatient(resource.data.patientId));
+      allow create: if isSignedIn() &&
+                       isValidId(prescriptionId) &&
+                       incoming().patientId == request.auth.uid &&
+                       isValidPrescription(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(prescriptionId) &&
+                       existing().patientId == request.auth.uid &&
+                       isValidPrescription(incoming()) &&
+                       incoming().patientId == existing().patientId;
+      allow delete: if isSignedIn() && existing().patientId == request.auth.uid;
+    }
+
+    // 7. Emergency Passports Collection
+    match /emergencyPassports/{passportUserId} {
+      allow get: if true; // Emergency read permitted for scanning via unique identifier
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(passportUserId) && isValidEmergencyPassport(incoming());
+      allow update: if isOwner(passportUserId) &&
+                       isValidEmergencyPassport(incoming()) &&
+                       incoming().userId == existing().userId;
+      allow delete: if isOwner(passportUserId);
+    }
+  }
+}
