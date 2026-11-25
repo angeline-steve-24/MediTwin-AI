@@ -3,7 +3,7 @@
 > **“Your Medications. One Intelligent Twin.”**  
 > *AI-powered medication intelligence that helps patients and healthcare professionals organize, analyze, simulate, and securely share medication information.*
 
-🔗 **GitHub Repository:** https://github.com/Nivethitha-A/MediTwin-AI  
+🔗 **Deployed URL:** https://remix-meditwin-ai-9122.ai.studio  
 🎥 **Video Demonstration:** https://drive.google.com/file/d/1vzoX-qeQ_tszBqvVGpLdGWwgnxEoyoea/view?usp=sharing
 
 ---
